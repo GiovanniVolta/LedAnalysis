@@ -1,0 +1,6 @@
+# ignore all logs
+*.logs
+
+# ignore data
+resource_cache/
+strax_data/
