@@ -3,6 +3,7 @@ import strax
 import straxen
 st = straxen.contexts.strax_workshop_dali()
 st.register(straxen.plugins.led_calibration.LEDCalibration)
+print(st.show_config('led_calibration'))
 ###########################
 
 ### Python Initialization ###
@@ -18,13 +19,13 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import animation
 SMALL_SIZE = 10
-MEDIUM_SIZE = 14
-BIGGER_SIZE = 26
+MEDIUM_SIZE = 16
+BIGGER_SIZE = 24
 plt.rc('font', size=MEDIUM_SIZE)                                   # controls default text sizes
-plt.rc('axes', titlesize=MEDIUM_SIZE)                              # fontsize of the axes title
+plt.rc('axes', titlesize=BIGGER_SIZE)                              # fontsize of the axes title
 plt.rc('axes', labelsize=MEDIUM_SIZE)                              # fontsize of the x and y labels
-plt.rc('xtick', labelsize=BIGGER_SIZE)                             # fontsize of the tick labels
-plt.rc('ytick', labelsize=BIGGER_SIZE)                             # fontsize of the tick labels
+plt.rc('xtick', labelsize=MEDIUM_SIZE)                             # fontsize of the tick labels
+plt.rc('ytick', labelsize=MEDIUM_SIZE)                             # fontsize of the tick labels
 plt.rc('legend', fontsize=MEDIUM_SIZE, loc = 'best')               # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE, figsize=(15,8))            # fontsize of the figure title
 from matplotlib.collections import PatchCollection
@@ -190,76 +191,6 @@ PMT_QE_Inc = 1.10 # increase at cryogenic temperatures
 ######## SPE functions ########
 ###############################
 
-def ScalingSpectrum(data, n_channel_s = np.arange(0, 249, 1), ADC_correction = 7):
-    
-    # In order to subtract out the contribution of the noise to the amplitude spectrum, we will assume that 
-    # the fraction of SPE signals with amplitude below a threshold of 5 ADC counts is very small. 
-    # We then scale down the off-time amplitude spectrum such that the total counts below the 
-    # 5 ADC count threshold is the same as in the LED spectrum.
-    
-    datatype = [('pmt', np.int16),
-                ('spectrumLED', object), ('bins_LED_center', object),
-                ('spectrumNOISE', object), ('bins_NOISE_center', object),
-                ('spectrumNOISE_scaled', object)]
-
-    SPE = np.zeros((len(n_channel_s)), dtype = datatype)
-
-    for n_channel in tqdm(n_channel_s):
-        arr = data[data['channel'] == n_channel]
-
-        LED, bins_LED = np.histogram(arr['amplitudeLED'], bins=150, range=(0,300))
-        bins_LED_center = 0.5 * (bins_LED[1:] + bins_LED[:-1])
-        noise, bins_noise = np.histogram(arr['amplitudeNOISE'], bins=150, range=(0,300))
-        bins_noise_center = 0.5 * (bins_noise[1:] + bins_noise[:-1])
-
-        ADC_correction = 7
-        scaling_coeff = LED[:7].sum()/noise[:7].sum()
-        noise_scaled = noise*scaling_coeff
-
-        SPE[n_channel]['pmt'] = n_channel
-        SPE[n_channel]['spectrumLED'] = LED
-        SPE[n_channel]['bins_LED_center'] = bins_LED_center
-        SPE[n_channel]['spectrumNOISE'] = noise
-        SPE[n_channel]['bins_NOISE_center'] = bins_noise_center
-        SPE[n_channel]['spectrumNOISE_scaled'] = noise_scaled
-    
-    return SPE
-
-def SPE_Acceptance(data, n_channel_s = np.arange(0, 249, 1)):
-    
-    # The acceptance as a function of amplitude (threshold) is defined as the fraction of 
-    # noise-subtracted single photoelectron spectrum above that amplitude.
-    
-    datatype = [('pmt', np.int16),
-                ('Acceptance @ 15 ADC', np.float32),
-                ('Threshold for 0.9 acceptance', np.float32),
-                ('SPE acceptance', object), ('bins SPE acceptance', object),
-                ('noise-subtracted spectrum', object), ('error of noise-subtracted spectrum', object)]
-
-    SPE_acceptance = np.zeros((len(n_channel_s)), dtype = datatype)
-    i=0
-    for n_channel in tqdm(n_channel_s):
-        arr = data[data['pmt'] == n_channel]
-
-        diff = np.absolute(arr['spectrumLED'][0] - arr['spectrumNOISE_scaled'][0])
-        sigma_diff = np.sqrt(arr['spectrumLED'][0] + arr['spectrumNOISE_scaled'][0])
-
-        res =  1. - np.cumsum(diff)/np.sum(diff)
-        x_center = arr['bins_LED_center'][0]
-        pos_15ADC = np.where(x_center<16)
-        pos_acc90 = np.where(res<0.9)
-
-        SPE_acceptance[i]['Acceptance @ 15 ADC'] = res[pos_15ADC[0][-1]]
-        SPE_acceptance[i]['Threshold for 0.9 acceptance'] = x_center[pos_acc90[0][0]]
-        SPE_acceptance[i]['SPE acceptance'] = res
-        SPE_acceptance[i]['bins SPE acceptance'] = x_center
-        SPE_acceptance[i]['noise-subtracted spectrum'] = diff
-        SPE_acceptance[i]['error of noise-subtracted spectrum'] = sigma_diff
-        SPE_acceptance[i]['pmt'] = i
-        i=i+1
-    
-    return SPE_acceptance
-    
 def SPErough(data, n_channel_s = np.arange(0, 248, 1)):
     
     # 1. Identify the rough amplitude range corresponding to a single photoelectron
@@ -417,4 +348,100 @@ def SPErough(data, n_channel_s = np.arange(0, 248, 1)):
     #print('mean: ', mean, 'sigma: ', std, 'window LED: ', window)
     return window, info, df2
     
+
+def ScalingSpectrum(data, n_channel_s = np.arange(0, 249, 1)):
+    
+    # In order to subtract out the contribution of the noise to the amplitude spectrum, we will assume that 
+    # the fraction of SPE signals with amplitude below a threshold of(3-7) ADC counts is very small. 
+    # We then scale down the off-time amplitude spectrum such that the total counts below the 
+    # (3-7) ADC count threshold is the same as in the LED spectrum.
+    # The spectrum also contains contributions of 2 or more photoelectrons. From the scaling down factor 
+    # of the noise s, assuming a Poisson distribution of photoelectrons we estimate that the average 
+    # number of photoelectrons (occupancy) in the LED run was lambda = -ln(s) = 0.566.
+    # The fraction of events with 2 or more photoelectrons is then 1- exp(-lambda)(1+lambda) = 0.111. 
+    # The contribution of 2 or more photoelectrons leads to a slight over-estimate in the acceptances calculated.
+    
+    datatype = [('pmt', np.int16),
+                ('spectrumLED', object), ('bins_LED_center', object),
+                ('spectrumNOISE', object), ('bins_NOISE_center', object),
+                ('spectrumNOISE_scaled_3bin', object), ('occupancy_3bin', np.float32),
+                ('spectrumNOISE_scaled_4bin', object), ('occupancy_4bin', np.float32),
+                ('spectrumNOISE_scaled_5bin', object), ('occupancy_5bin', np.float32),
+                ('spectrumNOISE_scaled_6bin', object), ('occupancy_6bin', np.float32),
+                ('spectrumNOISE_scaled_7bin', object), ('occupancy_7bin', np.float32)]
+
+    SPE = np.zeros((len(n_channel_s)), dtype = datatype)
+
+    for n_channel in tqdm(n_channel_s):
+        arr = data[data['channel'] == n_channel]
+
+        LED, bins_LED = np.histogram(arr['amplitudeLED'], bins=400, range=(0,500))
+        bins_LED_center = 0.5 * (bins_LED[1:] + bins_LED[:-1])
+        noise, bins_noise = np.histogram(arr['amplitudeNOISE'], bins=400, range=(0,500))
+        bins_noise_center = 0.5 * (bins_noise[1:] + bins_noise[:-1])
+        
+        SPE[n_channel]['pmt'] = n_channel
+        SPE[n_channel]['spectrumLED'] = LED
+        SPE[n_channel]['bins_LED_center'] = bins_LED_center
+        SPE[n_channel]['spectrumNOISE'] = noise
+        SPE[n_channel]['bins_NOISE_center'] = bins_noise_center
+        
+        for i in range(3,8):
+            ADC_correction = i
+            scaling_coeff = LED[:i].sum()/noise[:i].sum() 
+            SPE[n_channel]['spectrumNOISE_scaled_'+str(i)+'bin'] = noise*scaling_coeff
+            SPE[n_channel]['occupancy_'+str(i)+'bin'] = -np.log(scaling_coeff)
+    
+    return SPE
+
+def SPE_Acceptance(data, n_channel_s = np.arange(0, 249, 1)):
+    
+    # The acceptance as a function of amplitude (threshold) is defined as the fraction of 
+    # noise-subtracted single photoelectron spectrum above that amplitude.
+    
+    datatype = [('pmt', np.int16),
+                ('Acceptance @ 15 ADC 3 bin', np.float32), ('Threshold for 0.9 acceptance 3 bin', np.float32),
+                ('SPE acceptance 3 bin', object), ('bins SPE acceptance 3 bin', object),
+                ('noise-subtracted spectrum 3 bin', object), ('error of noise-subtracted spectrum 3 bin', object),
+                ('Acceptance @ 15 ADC 4 bin', np.float32), ('Threshold for 0.9 acceptance 4 bin', np.float32),
+                ('SPE acceptance 4 bin', object), ('bins SPE acceptance 4 bin', object),
+                ('noise-subtracted spectrum 4 bin', object), ('error of noise-subtracted spectrum 4 bin', object),
+                ('Acceptance @ 15 ADC 5 bin', np.float32), ('Threshold for 0.9 acceptance 5 bin', np.float32),
+                ('SPE acceptance 5 bin', object), ('bins SPE acceptance 5 bin', object),
+                ('noise-subtracted spectrum 5 bin', object), ('error of noise-subtracted spectrum 5 bin', object),
+                ('Acceptance @ 15 ADC 6 bin', np.float32), ('Threshold for 0.9 acceptance 6 bin', np.float32),
+                ('SPE acceptance 6 bin', object), ('bins SPE acceptance 6 bin', object),
+                ('noise-subtracted spectrum 6 bin', object), ('error of noise-subtracted spectrum 6 bin', object),
+                ('Acceptance @ 15 ADC 7 bin', np.float32), ('Threshold for 0.9 acceptance 7 bin', np.float32),
+                ('SPE acceptance 7 bin', object), ('bins SPE acceptance 7 bin', object),
+                ('noise-subtracted spectrum 7 bin', object), ('error of noise-subtracted spectrum 7 bin', object),
+                ]
+
+    SPE_acceptance = np.zeros((len(n_channel_s)), dtype = datatype)
+    j=0
+    for n_channel in tqdm(n_channel_s):
+        arr = data[data['pmt'] == n_channel]
+        SPE_acceptance[j]['pmt'] = j
+        
+        for i in range(3,8):
+            diff = np.absolute(arr['spectrumLED'][0] - arr['spectrumNOISE_scaled_'+str(i)+'bin'][0])
+            sigma_diff = np.sqrt(arr['spectrumLED'][0] + arr['spectrumNOISE_scaled_'+str(i)+'bin'][0])
+
+            res =  1. - np.cumsum(diff)/np.sum(diff)
+            x_center = arr['bins_LED_center'][0]
+            pos_15ADC = np.where(x_center<16)
+            pos_acc90 = np.where(res<0.9)
+
+            SPE_acceptance[j]['Acceptance @ 15 ADC '+str(i)+' bin'] = res[pos_15ADC[0][-1]]
+            SPE_acceptance[j]['Threshold for 0.9 acceptance '+str(i)+' bin'] = x_center[pos_acc90[0][0]]
+            SPE_acceptance[j]['SPE acceptance '+str(i)+' bin'] = res
+            SPE_acceptance[j]['bins SPE acceptance '+str(i)+' bin'] = x_center
+            SPE_acceptance[j]['noise-subtracted spectrum '+str(i)+' bin'] = diff
+            SPE_acceptance[j]['error of noise-subtracted spectrum '+str(i)+' bin'] = sigma_diff
+        
+        j=j+1
+    
+    return SPE_acceptance
+    
+
     
