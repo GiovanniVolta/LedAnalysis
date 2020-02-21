@@ -1,6 +1,6 @@
 import sys
 sys.path.append('/home/gvolta/XENONnT/LedAnalysis/Script')
-from init import *
+from Initialization import *
 import configparser as cp
 Config = cp.ConfigParser()
 Config.read('/home/gvolta/XENONnT/LedAnalysis/Script/conf.ini')

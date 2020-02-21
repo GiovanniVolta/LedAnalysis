@@ -1,9 +1,9 @@
 ### Strax configuration ###
 import strax
 import straxen
-st = straxen.contexts.strax_workshop_dali()
-st.register(straxen.plugins.led_calibration.LEDCalibration)
-print(st.show_config('led_calibration'))
+st = straxen.contexts.strax_SPE()
+#st.register(straxen.plugins.led_calibration.LEDCalibration)
+#print(st.show_config('led_calibration'))
 ###########################
 
 ### Python Initialization ###
@@ -314,13 +314,13 @@ def SPErough(data, n_channel_s = np.arange(0, 248, 1)):
         # dizionario. Non si sa mai
         ############################
 
-        #info['pmt'].append(n_channel)
+        info['pmt'].append(n_channel)
         #info['noise_mu'].append(noise_mu)
         #info['noise_sigma'].append(noise_sigma)
         #info['noise_norm'].append(noise_norm)
-        #info['LED_mu'].append(LED_mu)
-        #info['LED_sigma'].append(LED_sigma)
-        #info['LED_norm'].append(LED_norm)
+        info['LED_mu'].append(mean)
+        info['LED_sigma'].append(N)
+        info['LED_norm'].append(sig)
 
         d_temp = pd.DataFrame({'channel': [ ], 'idx_LED': [ ]})
         #######################################
@@ -346,7 +346,7 @@ def SPErough(data, n_channel_s = np.arange(0, 248, 1)):
     std = df2['idx_LED'].std()
     window = [int(median-0.5*std),int(median+0.5*std)]
     #print('mean: ', mean, 'sigma: ', std, 'window LED: ', window)
-    return window#, info, df2
+    return window, info, df2
     
 
 def ScalingSpectrum(data, n_channel_s = np.arange(0, 249, 1)):

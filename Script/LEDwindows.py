@@ -1,6 +1,6 @@
 import sys
 sys.path.append('/home/gvolta/XENONnT/LedAnalysis/Script')
-from init import *
+from Initialization import *
 import configparser as cp
 Config = cp.ConfigParser()
 Config.read('/home/gvolta/XENONnT/LedAnalysis/Script/conf.ini')
@@ -30,7 +30,8 @@ for i in range(len(data_rr)):
     Data[i]['pmt'] = data_rr['channel'][i]
     Data[i]['Amplitude'] = np.max(data_rr['data'][i])
     Data[i]['Sample of Amplitude'] = np.argmax(data_rr['data'][i])
-window = SPErough(data = Data)
+print(Data)
+window, info_fit, sample_time = SPErough(data = Data)
 length = window[1]-window[0]
 window_noise = [5, 5+length]
 
@@ -49,6 +50,12 @@ Config.set("window_pars", "noise_windows_right", str(window_noise[1])) # update
 
 with open('/home/gvolta/XENONnT/LedAnalysis/Script/conf.ini', 'w+') as configfile:
     Config.write(configfile)
+
+path_data = Config.get('output_pars','path_data')
+save_data = Config.getboolean('output_pars','save_data')
+if save_data == True:
+    pd.info_fit.to_csv(path_data+date+'/info_fit.csv', info_fit)
+    pd.sample_time.to_csv(path_data+date+'/sample_time.csv', sample_time)
     
 del Data, data_rr
 print('Fine window.py (GB): ', (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)/1000000)
