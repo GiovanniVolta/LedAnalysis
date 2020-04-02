@@ -94,7 +94,7 @@ class PMTanalyzer():
             if window != None: 
                 amplitude['channel'][i]   = data['channel'][i]
                 amplitude['amplitude'][i] = np.max(wf[int(window[0]):int(window[1])])
-                amplitude['sample of amplitude'][i] = np.argmax(wf[int(window[0]):int(window[1])])
+                amplitude['sample of amplitude'][i] = np.argmax(wf[int(window[0]):int(window[1])]) + int(window[0])
             else:
                 amplitude['channel'][i]   = data['channel'][i]
                 amplitude['amplitude'][i] = np.max(wf)
@@ -625,7 +625,7 @@ class PMTanalyzer():
         #a = 0.018
         return A * V**(k*n)
     
-    def get_HV_for_5e6_gain(self, Gain):
+    def get_HVfor5e6gain(self, Gain):
         ''' 
         Function that compute the HV for gain equal 5e6
         
@@ -639,6 +639,50 @@ class PMTanalyzer():
 
         '''
         return 1500.*pow(5./Gain, 1./(0.672*12.))
+    
+    def get_spemeanwaveform(self, data_rr, amplitude, channels, lenght=[20,20]):
+        ''' 
+        Function that compute the HV for gain equal 5e6
+        
+        Args:
+            1. Gain: gain obtained at 1500 V
+           
+        Note:
+            
+        Output:
+            1. HV for gain equal to 5e6
+
+        '''
+        datatype    = [('channel', np.int16), ('SPE mean data', object), ('SPE error data', object)]
+        wfmean_data = np.zeros(len(channels), dtype = datatype)
+
+        for i, ch in enumerate(channels):
+            gauss, result_fit, bins = self.get_sperough(amplitude, channel=ch)
+            if gauss != 0:
+                g_center = result_fit.best_values['g_center']
+                g_sigma  = result_fit.best_values['g_sigma']
+
+                mask = (amplitude[amplitude['channel']==ch]['amplitude']>(g_center-g_sigma))&(amplitude[amplitude['channel']==ch]['amplitude']<(g_center+g_sigma))
+                spe_data_rr = data_rr[data_rr['channel']==ch][mask]['data']
+                spe_idx_amp = amplitude[amplitude['channel']==ch][mask]['sample of amplitude']
+
+                spe_wf = [ ]
+                for j in range(len(spe_data_rr)):
+                    wf = spe_data_rr[j]
+                    left = int(spe_idx_amp[j] - lenght[0])
+                    right = int(spe_idx_amp[j] + lenght[1])
+                    spe_wf.append(wf[left:right])
+
+                wfmean_data['channel'][i]        = ch
+                wfmean_data['SPE mean data'][i]  = np.mean(spe_wf, axis=0)
+                wfmean_data['SPE error data'][i] =  np.std(spe_wf, axis=0)/(lenght[0]+lenght[1])
+
+            else:
+                wfmean_data['channel'][i]        = ch
+                wfmean_data['SPE mean data'][i]  = 0
+                wfmean_data['SPE error data'][i] = 0
+
+        return wfmean_data
     
                 
 ################    

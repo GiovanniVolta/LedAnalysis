@@ -37,8 +37,7 @@ python {python_file} {run_id} {data_path} {config_file}
 """
 
 
-def scan_parameters(strax_options,
-                    directory,
+def scan_parameters(strax_options, directory,
                     **kwargs):
     """Called in mystuff.py to run specified jobs. 
     
@@ -53,17 +52,17 @@ def scan_parameters(strax_options,
     """
     
     # Check that directory exists, else make it
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    #if not os.path.exists(directory):
+    #    os.makedirs(directory)
 
     # Submit each of these, such that it calls me (parameter_scan.py) with submit_setting option
     for i, strax_option in enumerate(strax_options):
         print('Submitting %d with %s' % (i, strax_option))
-        submit_setting(directory=directory, **strax_option)
+        submit_setting(**strax_option, directory=directory)
 
     pass
 
-def submit_setting(run_id, directory, **kwargs):
+def submit_setting(run_id, config, plugin, directory, **kwargs):
     """
     Submits a job with a certain setting.
     
@@ -83,18 +82,13 @@ def submit_setting(run_id, directory, **kwargs):
         - env_name: Which conda env do you want, defaults to strax inside conda_dir
     """
     
-    job_fn = tempfile.NamedTemporaryFile(delete=False,
-                                         dir=directory).name
-    log_fn = tempfile.NamedTemporaryFile(delete=False,
-                                         dir=directory).name
-
-    config_fn = tempfile.NamedTemporaryFile(delete=False,
-                                            dir=directory).name
+    job_fn    = tempfile.NamedTemporaryFile(delete=False, dir=directory).name
+    log_fn    = tempfile.NamedTemporaryFile(delete=False, dir=directory).name
+    config_fn = tempfile.NamedTemporaryFile(delete=False, dir=directory).name
     
     #Takes configuration parameters and dumps the stringed version into a file called config_fn
-    #with open(config_fn, mode='w') as f:
-    #    json.dump(config, f)
-
+    with open(config_fn, mode='w') as f:
+        json.dump(config, f)
 
     # TODO: move these default settings out to above somehow.  Maybe a default dictionary
     # that gets overloaded?
@@ -103,10 +97,11 @@ def submit_setting(run_id, directory, **kwargs):
         # TODO PEP8
         f.write(JOB_HEADER.format(  
             log_fn=log_fn,
+            config=str(config),
             python_file=os.path.abspath(__file__),
             config_file = config_fn,
             name = kwargs.get('job_name',
-                              'magician'),
+                              'gvolta'),
             n_cpu=kwargs.get('n_cpu',
                              40),            
             max_hours=kwargs.get('max_hours',
@@ -119,9 +114,9 @@ def submit_setting(run_id, directory, **kwargs):
                                  '/dali/lgrandi/strax/miniconda3'),
             env_name=kwargs.get('env_name', 'strax'),
             run_id=kwargs.get('run_id',
-                               '180215_1029'),
+                               run_id),
             data_path=kwargs.get('data_path', 
-                                 '/strax_data'), 
+                                 directory), 
             extra_header=kwargs.get('extra_header',
                                     ''),
         ))
@@ -135,15 +130,13 @@ def submit_setting(run_id, directory, **kwargs):
 
     print("\tYou have job id %d" % job_id)
 
-def work(run_id, data_path, **kwargs):
+def work(run_id, plugin, data_path, config, **kwargs):
     st = straxen.contexts.strax_SPE()
+    print(run_id, plugin, data_path, config)
+    #st.storage[-1] = strax.DataDirectory(data_path, provide_run_metadata=False)
     
-    st.storage[-1] = strax.DataDirectory(data_path,
-                                         provide_run_metadata=False)
     path_to_df = 'scanner_dfs/'
-    df = st.get_df(run_id,
-                   'raw_records',
-                   max_workers = kwargs.get('n_cpu', 40))
+    df = st.get_array(run_id, plugin, config=config, max_workers = kwargs.get('n_cpu', 40))
 
 if __name__ == "__main__": #happens if submit_setting() is called
     if len(sys.argv) == 1: # argv[0] is the filename
@@ -152,10 +145,13 @@ if __name__ == "__main__": #happens if submit_setting() is called
     elif len(sys.argv) == 4:
         run_id = sys.argv[1]
         data_path = sys.argv[2]
-        print(run_id, data_path)
+        config_fn = sys.argv[3]
+        print(run_id, data_path, config_fn)
         print("Things are changing")
         # Reread the config file to grab the config parameters
+        with open(config_fn, mode='r') as f:
+            config = json.load(f)
         
-        work(run_id=run_id, data_path=data_path, max_workers=40)
+        work(run_id=run_id, data_path=data_path, config=config, max_workers=40)
     else:
         raise ValueError("Bad command line arguments")
