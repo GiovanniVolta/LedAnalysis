@@ -1,0 +1,9 @@
+/dali/lgrandi/strax/strax/strax/context.py:373: UserWarning: Option n_tpc_pmts not taken by any registered plugin
+  warnings.warn(f"Option {k} not taken by any registered plugin")
+/dali/lgrandi/strax/strax/strax/context.py:373: UserWarning: Option gain_model not taken by any registered plugin
+  warnings.warn(f"Option {k} not taken by any registered plugin")
+/dali/lgrandi/strax/strax/strax/context.py:373: UserWarning: Option n_tpc_pmts not taken by any registered plugin
+  warnings.warn(f"Option {k} not taken by any registered plugin")
+/dali/lgrandi/strax/strax/strax/context.py:373: UserWarning: Option gain_model not taken by any registered plugin
+  warnings.warn(f"Option {k} not taken by any registered plugin")
+Loading 3 runs: 0it [00:00, ?it/s]Loading 3 runs: 1it [00:35, 35.46s/it]Loading 3 runs: 2it [11:03, 213.22s/it]Loading 3 runs: 3it [12:20, 172.23s/it]Loading 3 runs: 3it [12:20, 246.68s/it]

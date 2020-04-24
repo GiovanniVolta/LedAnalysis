@@ -1,0 +1,39 @@
+Activating conda environment
+SPE and Gain analysis
+
+
+
+
+___   ___  _______ .__   __.   ______   .__   __.        .___________.   __  __             _____    _____    ____  
+\  \ /  / |   ____||  \ |  |  /  __  \  |  \ |  |        |           |  |  \/  |    /\     / ____|  |_   _| /  ___| 
+ \  V  /  |  |__   |   \|  | |  |  |  | |   \|  |  _   _ `---|  |----`  | \  / |   /  \    | |  __    | |   | |      
+  >   <   |   __|  |  . `  | |  |  |  | |  . `  | | \ | |    |  |       | |\/| |  / /\ \   | | |_ |   | |   | |      
+ /  .  \  |  |____ |  |\   | |  `--`  | |  |\   | |  \| |    |  |       | |  | | / ____ \  | |__| |  _| |_  | |___  
+/__/ \__\ |_______||__| \__|  \______/  |__| \__| |_|\__|    |__|       |_|  |_|/_/    \_\ \ _____| |_____| \_____|  
+powered by Giovanni Volta, Chiara Capelli and Shingo Kazama (c)
+
+
+
+
+Configuration file:  /home/gvolta/XENONnT/LedAnalysis/Commissioning/led_window/configuration_led_window.ini
+/home/gvolta/XENONnT/LedAnalysis/Commissioning/led_window/configuration_led_window.ini
+007333 007334 007335 007336 007337 007338 007339 007340 007341
+led_window:  [75, 110] 	noise_window:  [30, 65]
+                           option  ...                                                                                                 help
+0                 baseline_window  ...                                                           Window (samples) for baseline calculation.
+1                      led_window  ...                                       Window (samples) where we expect the signal in LED calibration
+2                    noise_window  ...                                                               Window (samples) to analysis the noise
+3                    channel_list  ...     Three different light level for XENON1T: (0,36), (37,126), (127,248). Defalt value: all the PMTs
+4                   record_length  ...                                                                     Number of samples per raw_record
+5   digitizer_sampling_resolution  ...                                                                        Digitizer sampling resolution
+6                  run_start_time  ...                                                               time of start run (s since unix epoch)
+7              daq_chunk_duration  ...                                                                     Duration of regular chunks in ns
+8      daq_overlap_chunk_duration  ...                                                        Duration of intermediate/overlap chunks in ns
+9                  daq_compressor  ...                                                     Algorithm used for (de)compressing the live data
+10              n_readout_threads  ...                                                 Number of readout threads producing strax data files
+11                  daq_input_dir  ...                                                                     Directory where readers put data
+12           safe_break_in_pulses  ...  Time (ns) between pulses indicating a safe break in the datastream -- gaps of this size cannot b...
+13                          erase  ...                                                                  Delete reader data after processing
+14                    channel_map  ...                                      immutabledict mapping subdetector to (min, max) channel number.
+
+[15 rows x 5 columns]
